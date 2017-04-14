@@ -1,3 +1,4 @@
+#include <SD.h>
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BMP085_U.h>
@@ -21,18 +22,33 @@ void setup(void)
     Serial.print("Ooops, no BMP085 detected ... Check your wiring or I2C ADDR!");
     while(1);
   }
+
+  Serial.print("Initializing SD card...");
+
+  // see if the card is present and can be initialized:
+  if (!SD.begin(8)) {
+    Serial.println("Card failed, or not present");
+    // don't do anything more:
+    return;
+  }
+  Serial.println("card initialized.");
 }
  
 void loop(void) 
 {
   sensors_event_t event;
   bmp.getEvent(&event);
+
+  String alt = "";
+  String temp = "";
+  String pres = "";
  
   /* Display the results (barometric pressure is measure in hPa) */
   if (event.pressure)
   {
     /* Display atmospheric pressue in hPa */
     Serial.print("Pressure:    ");
+    pres = String(event.pressure);
     Serial.print(event.pressure);
     Serial.println(" hPa");
     
@@ -53,6 +69,7 @@ void loop(void)
      
     /* First we get the current temperature from the BMP085 */
     float temperature;
+    temp = String(temperature);
     bmp.getTemperature(&temperature);
     Serial.print("Temperature: ");
     Serial.print(temperature);
@@ -62,16 +79,15 @@ void loop(void)
     /* Update this next line with the current SLP for better results      */
     float seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
     Serial.print("Altitude:    "); 
-    Serial.print(bmp.pressureToAltitude(seaLevelPressure,
-                                        event.pressure,
-                                        temperature)); 
+    alt = String(bmp.pressureToAltitude(seaLevelPressure,event.pressure,temperature));
+    Serial.print(alt); 
     Serial.println(" m");
     Serial.println("");
     
     lcd.setCursor(0,1);
     lcd.print("Alt: ");
     lcd.setCursor(9,1);
-    lcd.print(bmp.pressureToAltitude(seaLevelPressure,event.pressure,temperature));
+    lcd.print(alt);
     lcd.setCursor(15,1);
     lcd.print("m");
 
@@ -82,5 +98,25 @@ void loop(void)
     lcd.setCursor(0,1);
     lcd.print("BMP ERROR");
   }
+  
+  String dataString = "Time: [N/A], Altitude: " + alt + ", Temperature: " + temp + " Pressure: " + pres;
+
+  // open the file. note that only one file can be open at a time,
+  // so you have to close this one before opening another.
+  File dataFile = SD.open("datalog.txt", FILE_WRITE);
+
+  // if the file is available, write to it:
+  if (dataFile) {
+    dataFile.println(dataString);
+    dataFile.close();
+    // print to the serial port too:
+    Serial.println(dataString);
+    
+  }
+  // if the file isn't open, pop up an error:
+  else {
+    Serial.println("error opening datalog.txt");
+  }  
+
   delay(1000);
 }
