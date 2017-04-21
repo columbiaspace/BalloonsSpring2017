@@ -1,4 +1,5 @@
 #include <SD.h>
+#include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BMP085_U.h>
@@ -38,11 +39,17 @@ void loop(void)
 {
   sensors_event_t event;
   bmp.getEvent(&event);
-
+  
   String alt = "";
   String temp = "";
   String pres = "";
- 
+  String wSpeed = "";
+
+  int windVal = analogRead(A0);
+  float windVoltage = windVal * (5.0 / 1023.0);
+  float windSpeed = 20.25 * (windVoltage - 0.4) * 2.23694;
+  wSpeed = String(windSpeed, 2);
+  
   /* Display the results (barometric pressure is measure in hPa) */
   if (event.pressure)
   {
@@ -79,16 +86,16 @@ void loop(void)
     /* Update this next line with the current SLP for better results      */
     float seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
     Serial.print("Altitude:    "); 
-    alt = String(bmp.pressureToAltitude(seaLevelPressure,event.pressure,temperature));
+    alt = String(bmp.pressureToAltitude(seaLevelPressure,event.pressure,temperature),0);
     Serial.print(alt); 
     Serial.println(" m");
     Serial.println("");
     
     lcd.setCursor(0,1);
-    lcd.print("Alt: ");
-    lcd.setCursor(9,1);
+    lcd.print("A:");
+    lcd.setCursor(2,1);
     lcd.print(alt);
-    lcd.setCursor(15,1);
+    lcd.setCursor(6,1);
     lcd.print("m");
 
   }
@@ -98,6 +105,18 @@ void loop(void)
     lcd.setCursor(0,1);
     lcd.print("BMP ERROR");
   }
+
+  lcd.setCursor(9,0);
+  lcd.print("W:");
+  lcd.setCursor(11,0);
+  lcd.print(wSpeed);
+  lcd.setCursor(13,1);
+  lcd.print("mph");
+
+  lcd.setCursor(0,0);
+  lcd.print("T:");
+  lcd.setCursor(2,0);
+  lcd.print("[N/A]");
   
   String dataString = "Time: [N/A], Altitude: " + alt + ", Temperature: " + temp + " Pressure: " + pres;
 
